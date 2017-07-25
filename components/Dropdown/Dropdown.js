@@ -78,9 +78,10 @@ class Dropdown extends React.Component {
     this.getElements(rawBrands, 5);
   }
   loadMore() {
-    this.setState(({ lazyLoadAmount, brands }) =>
-      ({ lazyLoadAmount: lazyLoadAmount + 50, hasMore: brands.length > lazyLoadAmount + 50 }),
-    );
+    this.setState(({ lazyLoadAmount, brands }, props) => {
+      const amount = lazyLoadAmount + props.lazyLoadAmount;
+      return ({ lazyLoadAmount: amount, hasMore: brands.length > amount });
+    });
   }
   toggleDropdown(e) {
     e.preventDefault();
