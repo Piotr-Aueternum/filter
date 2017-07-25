@@ -1,0 +1,19 @@
+[
+  {
+    "path": "/",
+    "page": "./home",
+    "chunk": "main",
+    "data": {
+      "brands": "GET http://api.shopstyle.com/api/v2/brands?pid=shopstyle"
+    }
+  },
+  {
+    "path": "/error",
+    "page": "./error",
+    "chunk": "main"
+  },
+  {
+    "path": "/tasks/:status(pending|completed)?",
+    "page": "./home"
+  }
+]
