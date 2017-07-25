@@ -17,6 +17,7 @@ class Dropdown extends React.Component {
     brands: PropTypes.shape({ brands: PropTypes.arrayOf(PropTypes.object) }).isRequired,
     maxDataLength: PropTypes.number.isRequired,
     lazyLoadAmount: PropTypes.number.isRequired,
+    onSubmit: PropTypes.func.isRequired,
   };
 
   constructor(props) {
@@ -29,14 +30,22 @@ class Dropdown extends React.Component {
       search: '',
       lazyLoadAmount: props.lazyLoadAmount,
       hasMore: props.brands.brands.length > 50,
+      selectedMatches: [],
     };
     this.loadMore = this.loadMore.bind(this);
-    this.renderInputsList = this.renderInputsList.bind(this);
     this.filterBrands = this.filterBrands.bind(this);
     this.updateSearch = this.updateSearch.bind(this);
+    this.updateInput = this.updateInput.bind(this);
+    this.toggleDropdown = this.toggleDropdown.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
   }
   componentDidMount() {
     this.filterBrands();
+    this.onSubmit();
+  }
+  onSubmit() {
+    const { state: { selectedMatches }, props: { onSubmit } } = this;
+    onSubmit(selectedMatches);
   }
   getElements(props, amount) {
     const top = [...props]
@@ -77,26 +86,34 @@ class Dropdown extends React.Component {
     e.preventDefault();
     this.setState(({ shown, lazyLoadAmount }) => ({ shown: !shown, lazyLoadAmount }));
   }
-  updateSearch(e) {
-    this.setState({ search: e.target.value }, () => this.filterBrands());
+  updateInput({ target: { value } }) {
+    const { selectedMatches } = this.state;
+    let arr = selectedMatches;
+    if (selectedMatches.includes(value)) {
+      arr = selectedMatches.filter(item => !(item === value));
+    } else {
+      arr = [...arr, value];
+    }
+    this.setState(() => ({ selectedMatches: arr }), () => this.onSubmit());
   }
-  renderInputsList() {
-    const { lazyLoadAmount, brands } = this.state;
-    return (brands
-      .filter((item, key) => key < lazyLoadAmount)
-      .map(({ id, name }) => <div key={id} style={{ height: 20 }}>
-        <label htmlFor={id}>
-          <input id={id} type="checkbox" value={name} />{name}
-        </label>
-      </div>)
-    );
+  updateSearch(e) {
+    this.setState({ search: e.target.value, selectedMatches: [] }, () => {
+      this.filterBrands();
+      this.onSubmit();
+    });
   }
   render() {
-    const { top, mounted, shown, hasMore } = this.state;
-    const { renderInputsList, loadMore, updateSearch, updateInput } = this;
+    const { top, mounted, shown, hasMore, brands, lazyLoadAmount } = this.state;
+    const { loadMore, updateSearch, updateInput } = this;
+    const renderInput = ({ id, name }, uniqueId = '') => (
+      <div key={id} style={{ height: 20 }}>
+        <label htmlFor={`${id}${uniqueId}`}>
+          <input id={`${id}${uniqueId}`} onChange={updateInput} type="checkbox" value={name} />{name}
+        </label>
+      </div>);
     return (
       <form>
-        <button onClick={e => this.toggleDropdown(e)}>Brands</button>
+        <button onClick={this.toggleDropdown}>Brands</button>
         {mounted && shown &&
         <div
           style={{ height: 300, width: 400, overflowY: 'scroll' }}
@@ -110,15 +127,15 @@ class Dropdown extends React.Component {
             loader={<div className="loader">Loading ...</div>}
           >
             <b>Top Brands</b>
-            {top.map(({ id, name }) => <div key={id} style={{ height: 20 }}>
-              <label htmlFor={id}>
-                <input id={id} onChange={updateInput} type="checkbox" value={name} />{name}
-              </label>
-            </div>)}
+            {top.map(item => renderInput(item, 'top'))}
             <b>All Brands</b>
-            {renderInputsList()}
+            {brands
+              .filter((item, key) => key < lazyLoadAmount)
+              .map(item => renderInput(item))
+            }
           </InfiniteScroller>
         </div>}
+        <button>Submit</button>
       </form>
     );
   }

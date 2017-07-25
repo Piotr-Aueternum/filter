@@ -25,7 +25,13 @@ class HomePage extends React.Component {
     const { brands } = this.props;
     return (
       <Layout className={s.content}>
-        <Dropdown maxDataLength={1000} lazyLoadAmount={50} brands={brands} />
+        <Dropdown
+          maxDataLength={1000}
+          onSubmit={(e) => { document.getElementById('selected').innerHTML = e; }}
+          lazyLoadAmount={50}
+          brands={brands}
+        />
+        <div id="selected" />
       </Layout>
     );
   }
