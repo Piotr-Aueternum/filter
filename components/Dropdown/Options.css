@@ -1,0 +1,16 @@
+.Options__heading {
+  font-family: serif;
+  font-size: 1.2rem;
+  margin: 12px 0;
+}
+
+.Options__list {
+  margin: 0;
+  padding: 0;
+}
+
+.Options__item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

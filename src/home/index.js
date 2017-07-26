@@ -27,8 +27,9 @@ class HomePage extends React.Component {
       <Layout className={s.content}>
         <Dropdown
           maxDataLength={1000}
-          onSubmit={(e) => { document.getElementById('selected').innerHTML = e; }}
+          onSubmit={(data) => { document.getElementById('selected').innerHTML = data.map(item => `${item.urlIdentifier}`); }}
           lazyLoadAmount={50}
+          maxTopLength={5}
           brands={brands}
         />
         <div id="selected" />

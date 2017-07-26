@@ -10,48 +10,66 @@
 
 import React, { PropTypes } from 'react';
 import InfiniteScroller from 'react-infinite-scroller';
+import s from './Dropdown.css';
+import Options from './Options';
 
 class Dropdown extends React.Component {
 
   static propTypes = {
     brands: PropTypes.shape({ brands: PropTypes.arrayOf(PropTypes.object) }).isRequired,
     maxDataLength: PropTypes.number.isRequired,
+    maxTopLength: PropTypes.number.isRequired,
     lazyLoadAmount: PropTypes.number.isRequired,
     onSubmit: PropTypes.func.isRequired,
   };
 
   constructor(props) {
     super(props);
-    this.state = {
-      brands: props.brands.brands,
-      shown: false,
-      mounted: false,
-      top: [],
-      search: '',
-      lazyLoadAmount: props.lazyLoadAmount,
-      hasMore: props.brands.brands.length > 50,
-      selectedMatches: [],
-    };
-    this.loadMore = this.loadMore.bind(this);
-    this.filterBrands = this.filterBrands.bind(this);
-    this.updateSearch = this.updateSearch.bind(this);
-    this.updateInput = this.updateInput.bind(this);
-    this.toggleDropdown = this.toggleDropdown.bind(this);
-    this.onSubmit = this.onSubmit.bind(this);
+    Object.assign(this, {
+      state: {
+        brands: props.brands.brands,
+        shown: false,
+        mounted: false,
+        search: '',
+        lazyLoadAmount: props.lazyLoadAmount,
+        hasMore: props.brands.brands.length > 50,
+      },
+      loadMore: this.loadMore.bind(this),
+      filterBrands: this.filterBrands.bind(this),
+      updateSearch: this.updateSearch.bind(this),
+      onLabelClick: this.onLabelClick.bind(this),
+      toggleDropdown: this.toggleDropdown.bind(this),
+      onSubmit: this.onSubmit.bind(this),
+      clearBrands: this.clearBrands.bind(this),
+    });
   }
   componentDidMount() {
     this.filterBrands();
     this.onSubmit();
   }
   onSubmit() {
-    const { state: { selectedMatches }, props: { onSubmit } } = this;
-    onSubmit(selectedMatches);
+    const { state: { brands }, props: { onSubmit } } = this;
+    onSubmit(brands.filter(item => item.checked));
   }
-  getElements(props, amount) {
-    const top = [...props]
-      .sort((a, b) => b.score - a.score)
-      .splice(0, amount);
-    this.setState({ top });
+  onLabelClick(urlIdentifier) {
+    const { maxDataLength } = this.props;
+    const { brands: rawBrands } = this.state;
+    const brands = rawBrands
+      .map((item) => {
+        if (item.checked && item.urlIdentifier === urlIdentifier) {
+          return Object.assign({}, { ...item, checked: false });
+        }
+        if (item.checked) {
+          return item;
+        }
+        return Object.assign({}, { ...item, checked: item.urlIdentifier === urlIdentifier });
+      })
+      .filter((item, key) => key < maxDataLength);
+    this.setState({ brands }, () => this.onSubmit());
+  }
+  clearBrands(e) {
+    e.preventDefault();
+    this.filterBrands();
   }
   filterBrands() {
     const { search } = this.state;
@@ -59,7 +77,6 @@ class Dropdown extends React.Component {
 
     const normalizeWord = word => word.toLowerCase();
     const normalizedSearch = normalizeWord(search);
-
     const brands = [...rawBrands]
       .sort((a, b) => b.score - a.score)
       .filter(({ synonyms, name }) => {
@@ -73,9 +90,9 @@ class Dropdown extends React.Component {
       })
       .filter((item, key) => key < maxDataLength)
       .sort((a, b) => (a.name).localeCompare(b.name))
-      .map(({ id, synonyms, name, score }) => Object.assign({}, { id, synonyms, name, score }));
+      .map(({ id, synonyms, name, score, urlIdentifier }) =>
+        Object.assign({}, { checked: false, id, synonyms, name, score, urlIdentifier }));
     this.setState(() => ({ brands, mounted: true }));
-    this.getElements(rawBrands, 5);
   }
   loadMore() {
     this.setState(({ lazyLoadAmount, brands }, props) => {
@@ -87,56 +104,57 @@ class Dropdown extends React.Component {
     e.preventDefault();
     this.setState(({ shown, lazyLoadAmount }) => ({ shown: !shown, lazyLoadAmount }));
   }
-  updateInput({ target: { value } }) {
-    const { selectedMatches } = this.state;
-    let arr = selectedMatches;
-    if (selectedMatches.includes(value)) {
-      arr = selectedMatches.filter(item => !(item === value));
-    } else {
-      arr = [...arr, value];
-    }
-    this.setState(() => ({ selectedMatches: arr }), () => this.onSubmit());
-  }
   updateSearch(e) {
-    this.setState({ search: e.target.value, selectedMatches: [] }, () => {
+    this.setState({ search: e.target.value }, () => {
       this.filterBrands();
       this.onSubmit();
     });
   }
   render() {
-    const { top, mounted, shown, hasMore, brands, lazyLoadAmount } = this.state;
-    const { loadMore, updateSearch, updateInput } = this;
-    const renderInput = ({ id, name }, uniqueId = '') => (
-      <div key={id} style={{ height: 20 }}>
-        <label htmlFor={`${id}${uniqueId}`}>
-          <input id={`${id}${uniqueId}`} onChange={updateInput} type="checkbox" value={name} />{name}
-        </label>
-      </div>);
+    const { loadMore, updateSearch, onLabelClick, clearBrands } = this;
+    const { maxTopLength } = this.props;
+    const { mounted, shown, hasMore, brands, lazyLoadAmount } = this.state;
+    const selectedMatches = brands.filter(item => item.checked === true);
+    const top = [...brands]
+      .sort((a, b) => b.score - a.score)
+      .splice(0, maxTopLength);
     return (
-      <form>
-        <button onClick={this.toggleDropdown}>Brands</button>
+      <form className={s.Dropdown}>
+        <button className={`${s.Dropdown__button} ${shown ? `${s['Dropdown__button--open']}` : ''}`} onClick={this.toggleDropdown}>Brands</button>
         {mounted && shown &&
-        <div
-          style={{ height: 300, width: 400, overflowY: 'scroll' }}
-        >
-          <input type="text" onChange={updateSearch} placeholder="search" />
-          <InfiniteScroller
-            loadMore={loadMore}
-            hasMore={hasMore}
-            threshold={150}
-            useWindow={false}
-            loader={<div className="loader">Loading ...</div>}
-          >
-            <b>Top Brands</b>
-            {top.map(item => renderInput(item, 'top'))}
-            <b>All Brands</b>
-            {brands
-              .filter((item, key) => key < lazyLoadAmount)
-              .map(item => renderInput(item))
-            }
-          </InfiniteScroller>
+        <div className={s.Dropdown__container}>
+          <div className={s.Dropdown__search}>
+            <input className={s.Dropdown__searchInput} type="text" onChange={updateSearch} placeholder="search" />
+          </div>
+          <div className={s.Dropdown__popup}>
+            <InfiniteScroller
+              loadMore={loadMore}
+              hasMore={hasMore}
+              threshold={150}
+              useWindow={false}
+              loader={<div className={s.Dropdown__loader}>Loading ...</div>}
+            >
+              <Options
+                heading="Top Brands"
+                data={top}
+                onLabelClick={onLabelClick}
+              />
+              {selectedMatches.length > 0 &&
+              <Options
+                heading="Selected Brands"
+                onLabelClick={onLabelClick}
+                data={selectedMatches}
+              />}
+              <Options
+                heading="All Brands"
+                onLabelClick={onLabelClick}
+                data={brands.filter((item, key) => key < lazyLoadAmount)}
+              />
+            </InfiniteScroller>
+          </div>
+          {selectedMatches.length > 0 &&
+          <button className={s.Dropdown__clear} onClick={clearBrands}>Clear Brands</button>}
         </div>}
-        <button>Submit</button>
       </form>
     );
   }
