@@ -34,7 +34,6 @@
   line-height: 2.8rem;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  display: block;
   background: #fff;
   border: 0;
   box-sizing: border-box;
@@ -49,7 +48,7 @@
   height: 5px;
   width: 5px;
   border: 2px solid;
-  border-color:  #0083ed  #0083ed transparent transparent;
+  border-color: #0083ed #0083ed transparent transparent;
   transform: rotate(-45deg);
 }
 
